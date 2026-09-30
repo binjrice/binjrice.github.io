@@ -149,6 +149,8 @@ function initPrint() {
 const stage = $('three-d-stage');
 const stageBox = $('.stage');
 const lidButton = $('#lid-toggle');
+const zoomInButton = $('#zoom-in');
+const zoomOutButton = $('#zoom-out');
 
 let resolveMounted;
 const mounted = new Promise((resolve) => (resolveMounted = resolve));
@@ -173,12 +175,30 @@ function showFallback() {
 function wireLidButton(box) {
   const label = $('.btn__label', lidButton);
   const sync = (open) => {
-    lidButton.setAttribute('aria-pressed', String(open));
+    lidButton.dataset.open = String(open);
     label.textContent = open ? lidButton.dataset.labelClose : lidButton.dataset.labelOpen;
   };
   lidButton.addEventListener('click', () => box.toggle());
   sync(box.isOpen());
   return sync;
+}
+
+// + / - buttons. They follow the stage's zoom level and step aside at the ends;
+// focus moves to the other button when the one being pressed is disabled.
+function wireZoomButtons() {
+  if (!zoomInButton || !zoomOutButton) return;
+  const sync = () => {
+    const level = stage.zoomLevel;
+    const active = document.activeElement;
+    zoomOutButton.disabled = level <= 0;
+    zoomInButton.disabled = level >= 1;
+    if (active === zoomInButton && zoomInButton.disabled) zoomOutButton.focus();
+    if (active === zoomOutButton && zoomOutButton.disabled) zoomInButton.focus();
+  };
+  zoomInButton.addEventListener('click', () => stage.zoomIn());
+  zoomOutButton.addEventListener('click', () => stage.zoomOut());
+  stage.addEventListener('zoomchange', sync);
+  sync();
 }
 
 async function initStage() {
@@ -199,6 +219,7 @@ async function initStage() {
     stage.setObject(box.model);
     syncLid = wireLidButton(box);
     lidButton.disabled = false;
+    wireZoomButtons();
     setStageState('ready');
 
     window.__binjBox = box;

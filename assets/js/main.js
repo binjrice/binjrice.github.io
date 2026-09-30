@@ -1,4 +1,5 @@
-// Binj site behaviour: 3D carton, lid toggle, navigation, reveals, print.
+// Binj site behaviour: 3D pack (5 kg carton / 2 kg can), size switch, lid
+// toggle, navigation, reveals, print.
 // Loaded as an ES module; stage.js (classic script) defines <three-d-stage>.
 
 const root = document.documentElement;
@@ -131,121 +132,297 @@ function initActiveSection() {
 
 function initPrint() {
   $$('[data-print]').forEach((button) => button.addEventListener('click', () => window.print()));
-
-  // The poster is only fetched when it exists, so a missing file never shows
-  // a broken image. Once it loads it is also used at the top of the print sheet.
-  const printPoster = $('.print-head__poster');
-  const source = printPoster && printPoster.dataset.src;
-  if (!source) return;
-  const probe = new Image();
-  probe.onload = () => {
-    printPoster.src = source;
-    root.classList.add('has-poster');
-  };
-  probe.src = source;
+  initPrintPoster();
 }
 
 // ---------------------------------------------------------------- 3D stage
+// Two packs share the stage: the 5 kg carton (the default) and the 2 kg can.
+// A model is built the first time its size is shown and kept after that, so
+// switching back is instant and each lid keeps the state it was left in.
+const SIZES = ['5kg', '2kg'];
+const DEFAULT_SIZE = SIZES[0];
+// A module that failed to fetch stays failed for its URL, so a retry asks for a
+// new one (the query is ignored by the server).
+const PRODUCTS = {
+  '5kg': async (THREE, options, retry) =>
+    (await import(`./binj-box.js${retry ? `?retry=${retry}` : ''}`)).buildBinjBox(THREE, options),
+  '2kg': async (THREE, options, retry) =>
+    (await import(`./binj-can.js${retry ? `?retry=${retry}` : ''}`)).buildBinjCan(THREE, options),
+};
+
 const stage = $('three-d-stage');
 const stageBox = $('.stage');
 const lidButton = $('#lid-toggle');
 const zoomInButton = $('#zoom-in');
 const zoomOutButton = $('#zoom-out');
+const sizeGroup = $('.stage__size');
+const sizeOptions = $$('.stage__size-option');
+
+const wantedSize = (params.get('size') || '').toLowerCase();
+let size = SIZES.includes(wantedSize) ? wantedSize : DEFAULT_SIZE; // the selected pack
+const built = new Map(); // size -> product { model, setOpen, toggle, isOpen }
+const building = new Map(); // size -> promise of a product, while it loads
+const attempts = new Map(); // size -> how many builds have failed
+let current = null; // the product on stage: { size, product }
+let stageFailed = false; // WebGL could not start
 
 let resolveMounted;
 const mounted = new Promise((resolve) => (resolveMounted = resolve));
 
+const selectedOption = () => sizeOptions.find((option) => option.dataset.value === size);
+
 function setStageState(state) {
   if (stageBox) stageBox.dataset.state = state;
+  if (lidButton) lidButton.disabled = state !== 'ready';
+  syncZoom();
 }
 
-function showFallback() {
+// Whether an image exists; each file is probed once, so a missing poster never
+// shows a broken image.
+const imageProbes = new Map();
+function canLoad(src) {
+  if (!imageProbes.has(src)) {
+    imageProbes.set(
+      src,
+      new Promise((resolve) => {
+        const probe = new Image();
+        probe.onload = () => resolve(true);
+        probe.onerror = () => resolve(false);
+        probe.src = src;
+      })
+    );
+  }
+  return imageProbes.get(src);
+}
+
+// The still image of the selected pack, if there is one. Used when the 3D view
+// cannot be shown.
+async function showFallback() {
   setStageState('error');
+  const panel = $('.stage__fallback', stageBox);
   const img = $('.stage__poster', stageBox);
-  if (!img || !img.dataset.src) return;
-  img.onload = () => {
-    img.hidden = false;
-  };
-  img.onerror = () => {
-    img.hidden = true;
-  };
-  img.src = img.dataset.src;
+  const option = selectedOption();
+  if (!panel || !img || !option) return;
+  img.hidden = true;
+  delete panel.dataset.image;
+  const src = option.dataset.poster;
+  if (!src || !(await canLoad(src))) return;
+  // The selection may have moved on while the file was probed.
+  if (option !== selectedOption() || stageBox.dataset.state !== 'error') return;
+  img.alt = option.dataset.posterAlt || '';
+  img.src = src;
+  img.hidden = false;
+  panel.dataset.image = 'on';
 }
 
-function wireLidButton(box) {
+// The print sheet opens with a still of the carton. It is only fetched when it
+// exists, and the sheet lists both packs whichever one is selected.
+async function initPrintPoster() {
+  const printPoster = $('.print-head__poster');
+  const option = sizeOptions.find((item) => item.dataset.value === DEFAULT_SIZE);
+  const src = option && option.dataset.poster;
+  if (!printPoster || !src || !(await canLoad(src))) return;
+  printPoster.src = src;
+  root.classList.add('has-poster');
+}
+
+function syncLid(open) {
   const label = $('.btn__label', lidButton);
-  const sync = (open) => {
-    lidButton.dataset.open = String(open);
-    label.textContent = open ? lidButton.dataset.labelClose : lidButton.dataset.labelOpen;
-  };
-  lidButton.addEventListener('click', () => box.toggle());
-  sync(box.isOpen());
-  return sync;
+  lidButton.dataset.open = String(open);
+  label.textContent = open ? lidButton.dataset.labelClose : lidButton.dataset.labelOpen;
 }
 
 // + / - buttons. They follow the stage's zoom level and step aside at the ends;
 // focus moves to the other button when the one being pressed is disabled.
-function wireZoomButtons() {
-  if (!zoomInButton || !zoomOutButton) return;
-  const sync = () => {
-    const level = stage.zoomLevel;
-    const active = document.activeElement;
-    zoomOutButton.disabled = level <= 0;
-    zoomInButton.disabled = level >= 1;
-    if (active === zoomInButton && zoomInButton.disabled) zoomOutButton.focus();
-    if (active === zoomOutButton && zoomOutButton.disabled) zoomInButton.focus();
-  };
+// Both rest while no model is on stage.
+function syncZoom() {
+  if (!zoomInButton || !zoomOutButton || !stage) return;
+  const ready = stageBox.dataset.state === 'ready';
+  const level = stage.zoomLevel;
+  const focused = document.activeElement;
+  zoomOutButton.disabled = !ready || level <= 0;
+  zoomInButton.disabled = !ready || level >= 1;
+  if (focused === zoomInButton && zoomInButton.disabled) zoomOutButton.focus();
+  if (focused === zoomOutButton && zoomOutButton.disabled) zoomInButton.focus();
+}
+
+function wireStageControls() {
+  lidButton.addEventListener('click', () => current && current.product.toggle());
   zoomInButton.addEventListener('click', () => stage.zoomIn());
   zoomOutButton.addEventListener('click', () => stage.zoomOut());
-  stage.addEventListener('zoomchange', sync);
-  sync();
+  stage.addEventListener('zoomchange', syncZoom);
+}
+
+/** Build (or fetch) the product for one size. A failed build can be retried. */
+function buildProduct(which) {
+  if (!building.has(which)) {
+    const promise = (async () => {
+      const [{ THREE }] = await Promise.all([stage.ready, document.fonts.ready]);
+      const product = await PRODUCTS[which](
+        THREE,
+        {
+          fontsReady: document.fonts.ready,
+          onChange: (open) => {
+            if (current && current.size === which) syncLid(open);
+          },
+        },
+        attempts.get(which)
+      );
+      built.set(which, product);
+      return product;
+    })();
+    building.set(which, promise);
+    promise.catch(() => {
+      building.delete(which);
+      attempts.set(which, (attempts.get(which) || 0) + 1);
+    });
+  }
+  return building.get(which);
+}
+
+/** Put the selected pack on stage. Resolves with its product, or null when it
+ *  could not be shown (or the selection moved on while it loaded). */
+async function showProduct() {
+  if (stageFailed) {
+    showFallback();
+    return null;
+  }
+  const which = size;
+  let product = built.get(which);
+  if (!product) {
+    // The first time a size is shown: the loader covers the wait.
+    setStageState('loading');
+    try {
+      product = await buildProduct(which);
+    } catch (error) {
+      console.warn(`Binj ${which} 3D model unavailable, showing the still image:`, error);
+      if (which === size) showFallback();
+      return null;
+    }
+    if (which !== size) return null;
+  }
+  if (!current || current.product !== product) {
+    current = { size: which, product };
+    stage.setObject(product.model);
+    window.__binjBox = product;
+  }
+  syncLid(product.isOpen());
+  setStageState('ready');
+  return product;
+}
+
+// -------------------------------------------------------------- pack size
+/** Reflect the selected size in the page: copy, control, stage label, links. */
+function applySize() {
+  root.dataset.pack = size;
+  for (const option of sizeOptions) {
+    const checked = option.dataset.value === size;
+    option.setAttribute('aria-checked', String(checked));
+    option.tabIndex = checked ? 0 : -1;
+  }
+  const option = selectedOption();
+  if (stage && option && option.dataset.stageLabel) {
+    stage.setAttribute('aria-label', option.dataset.stageLabel);
+  }
+  // The other language opens on the same pack.
+  const query = size === DEFAULT_SIZE ? '' : `?size=${size}`;
+  for (const link of $$('.lang-link')) {
+    link.dataset.href = link.dataset.href || link.getAttribute('href');
+    link.setAttribute('href', link.dataset.href + query);
+  }
+}
+
+/** Keep the address bar on the selected size without adding history entries. */
+function syncUrl() {
+  if (isPosterMode) return;
+  try {
+    const url = new URL(location.href);
+    if (size === DEFAULT_SIZE) url.searchParams.delete('size');
+    else url.searchParams.set('size', size);
+    history.replaceState(history.state, '', url);
+  } catch (error) {
+    // Some sandboxes refuse replaceState; the choice simply is not in the URL.
+  }
+}
+
+function selectSize(next) {
+  if (!SIZES.includes(next) || next === size) return;
+  size = next;
+  applySize();
+  syncUrl();
+  showProduct();
+}
+
+// Radio group: arrows move the selection, Tab enters on the checked option.
+function initSizeSwitch() {
+  applySize();
+  if (!sizeGroup) return;
+  const rtl = root.dir === 'rtl';
+  const steps = {
+    ArrowDown: 1,
+    ArrowUp: -1,
+    ArrowRight: rtl ? -1 : 1,
+    ArrowLeft: rtl ? 1 : -1,
+  };
+
+  sizeGroup.addEventListener('click', (event) => {
+    const option = event.target.closest('.stage__size-option');
+    if (option) selectSize(option.dataset.value);
+  });
+
+  sizeGroup.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    const from = sizeOptions.indexOf(event.target.closest('.stage__size-option'));
+    let to = -1;
+    if (event.key in steps) to = (from + steps[event.key] + sizeOptions.length) % sizeOptions.length;
+    else if (event.key === 'Home') to = 0;
+    else if (event.key === 'End') to = sizeOptions.length - 1;
+    if (from < 0 || to < 0) return;
+    event.preventDefault();
+    sizeOptions[to].focus();
+    selectSize(sizeOptions[to].dataset.value);
+  });
 }
 
 async function initStage() {
   if (!stage) return;
   if (isPosterMode) stage.removeAttribute('autorotate');
 
-  stage.addEventListener('stage-error', () => showFallback());
+  wireStageControls();
+  stage.addEventListener('stage-error', () => {
+    stageFailed = true;
+    showFallback();
+  });
 
   try {
-    const [{ THREE }] = await Promise.all([stage.ready, document.fonts.ready]);
-    const { buildBinjBox } = await import('./binj-box.js');
-
-    let syncLid = () => {};
-    const box = await buildBinjBox(THREE, {
-      fontsReady: document.fonts.ready,
-      onChange: (open) => syncLid(open),
-    });
-    stage.setObject(box.model);
-    syncLid = wireLidButton(box);
-    lidButton.disabled = false;
-    wireZoomButtons();
-    setStageState('ready');
-
-    window.__binjBox = box;
-
-    if (isPosterMode) {
-      if (params.has('open')) {
-        box.setOpen(true);
-        await wait(2200);
-      }
-      stage.resetView();
-    }
-    resolveMounted(box);
+    await Promise.all([stage.ready, document.fonts.ready]);
   } catch (error) {
     console.warn('Binj 3D viewer unavailable, showing the still image:', error);
+    stageFailed = true;
     showFallback();
     resolveMounted(null);
+    return;
   }
+
+  const product = await showProduct();
+  if (product && isPosterMode) {
+    if (params.has('open')) {
+      product.setOpen(true);
+      await wait(2200);
+    }
+    stage.resetView();
+  }
+  resolveMounted(product);
 }
 
 // Poster mode: stills for the imagery step. Usage from a headless browser:
 //   await window.__binjPoster(1400, 1400, 'image/webp', 0.9)  ->  data URL
-// Add &open to the URL to render the lid open. The carton is always framed
-// from the default three-quarter view.
+// Add &open to the URL to render the lid open, and &size=2kg for the can (the
+// carton otherwise). The pack is always framed from the default three-quarter
+// view.
 window.__binjPoster = async (width = 1400, height = 1400, type = 'image/png', quality = 0.92) => {
-  const box = await mounted;
-  if (!box) throw new Error('3D viewer is not available');
+  const product = await mounted;
+  if (!product) throw new Error('3D viewer is not available');
   await nextFrame();
   stage.resetView();
   return stage.renderToDataURL(width, height, type, quality);
@@ -258,4 +435,5 @@ if (!isPosterMode) {
   initActiveSection();
   initPrint();
 }
+initSizeSwitch();
 initStage();

@@ -379,6 +379,10 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
       if (!THREE) throw new Error('three-d-stage: not ready - await stage.ready first');
       if (this._object) this._scene.remove(this._object);
       this._object = object;
+      // A new object starts on the default view, so the turntable restarts
+      // even if the last one was turned or zoomed by hand.
+      this._userMoved = false;
+      this._applyMotion();
       object.traverse((o) => {
         if (o.isMesh) {
           o.castShadow = true;

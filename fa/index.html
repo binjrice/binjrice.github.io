@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-pack="5kg">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Binj</title>
-<meta name="description" content="برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.">
+<meta name="description" content="برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی یا قوطی ۲ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.">
 <meta name="theme-color" content="#ece7de">
 <link rel="canonical" href="https://binjrice.github.io/fa/">
 <link rel="alternate" hreflang="en" href="https://binjrice.github.io/">
@@ -12,8 +12,8 @@
 <link rel="alternate" hreflang="x-default" href="https://binjrice.github.io/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Binj">
-<meta property="og:title" content="بینج | برنج هاشمی فریدونکنار، کارتن صادراتی ۵ کیلوگرمی">
-<meta property="og:description" content="برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.">
+<meta property="og:title" content="بینج | برنج هاشمی فریدونکنار، کارتن ۵ کیلوگرمی و قوطی ۲ کیلوگرمی">
+<meta property="og:description" content="برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی یا قوطی ۲ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.">
 <meta property="og:locale" content="fa_IR">
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:url" content="https://binjrice.github.io/fa/">
@@ -21,8 +21,8 @@
 <meta property="og:image:alt" content="کارتن صادراتی هشت‌ضلعی ۵ کیلوگرمی برنج هاشمی بینج">
 <meta name="twitter:image" content="https://binjrice.github.io/assets/img/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="بینج | برنج هاشمی فریدونکنار، کارتن صادراتی ۵ کیلوگرمی">
-<meta name="twitter:description" content="برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.">
+<meta name="twitter:title" content="بینج | برنج هاشمی فریدونکنار، کارتن ۵ کیلوگرمی و قوطی ۲ کیلوگرمی">
+<meta name="twitter:description" content="برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی یا قوطی ۲ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="preload" href="../assets/vendor/fonts/vazirmatn-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../assets/vendor/fonts/vazirmatn-arabic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -34,6 +34,8 @@
     var root = document.documentElement;
     root.classList.add('js');
     if (/[?&]poster\b/.test(location.search)) root.classList.add('is-poster');
+    // ?size=2kg opens on the 2 kg can; anything else keeps the 5 kg carton.
+    if (/[?&]size=2kg\b/i.test(location.search)) root.setAttribute('data-pack', '2kg');
     // If the main script never starts, do not leave reveal-on-scroll content hidden.
     setTimeout(function () {
       if (!root.classList.contains('reveal-ready')) root.classList.add('reveal-all');
@@ -43,7 +45,7 @@
 <script type="importmap">{"imports":{"three":"../assets/vendor/three/three.module.min.js","three/addons/controls/OrbitControls.js":"../assets/vendor/three/OrbitControls.js"}}</script>
 <script src="../assets/js/stage.js" defer></script>
 <script type="module" src="../assets/js/main.js"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"بینج - برنج هاشمی فریدونکنار، کارتن صادراتی ۵ کیلوگرمی","description":"برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.","category":"برنج","brand":{"@type":"Brand","name":"Binj","alternateName":"بینج"},"weight":{"@type":"QuantitativeValue","value":5,"unitCode":"KGM"},"countryOfOrigin":{"@type":"Country","name":"Iran"},"inLanguage":"fa","additionalProperty":[{"@type":"PropertyValue","name":"رقم","value":"هاشمی"},{"@type":"PropertyValue","name":"منطقه کشت","value":"فریدونکنار، مازندران، ایران"},{"@type":"PropertyValue","name":"طول دانه","value":"بیش از ۷ میلی‌متر"},{"@type":"PropertyValue","name":"افزایش طول پس از پخت","value":"حدود ۲ برابر طول اولیه"},{"@type":"PropertyValue","name":"درجه خلوص","value":"۱۰۰٪ هاشمی خالص"},{"@type":"PropertyValue","name":"افزودنی‌ها","value":"ندارد"},{"@type":"PropertyValue","name":"عطر","value":"طبیعی و معطر"}],"url":"https://binjrice.github.io/fa/","image":"https://binjrice.github.io/assets/img/og.jpg"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ProductGroup","name":"بینج - برنج هاشمی فریدونکنار","description":"برنج هاشمی دانه‌بلند، معطر و کهنه‌شده از فریدونکنار مازندران، وکیوم‌شده در کارتن صادراتی ۵ کیلوگرمی یا قوطی ۲ کیلوگرمی. مشخصات و شرایط تجاری برای واردکنندگان.","productGroupID":"binj-hashemi","variesBy":"https://schema.org/size","category":"برنج","brand":{"@type":"Brand","name":"Binj","alternateName":"بینج"},"countryOfOrigin":{"@type":"Country","name":"Iran"},"inLanguage":"fa","hasVariant":[{"@type":"Product","name":"بینج - برنج هاشمی فریدونکنار، کارتن صادراتی ۵ کیلوگرمی","size":"کارتن صادراتی ۵ کیلوگرمی","weight":{"@type":"QuantitativeValue","value":5,"unitCode":"KGM"}},{"@type":"Product","name":"بینج - برنج هاشمی فریدونکنار، قوطی ۲ کیلوگرمی","size":"قوطی کامپوزیتی ۲ کیلوگرمی","weight":{"@type":"QuantitativeValue","value":2,"unitCode":"KGM"}}],"additionalProperty":[{"@type":"PropertyValue","name":"رقم","value":"هاشمی"},{"@type":"PropertyValue","name":"منطقه کشت","value":"فریدونکنار، مازندران، ایران"},{"@type":"PropertyValue","name":"طول دانه","value":"بیش از ۷ میلی‌متر"},{"@type":"PropertyValue","name":"افزایش طول پس از پخت","value":"حدود ۲ برابر طول اولیه"},{"@type":"PropertyValue","name":"درجه خلوص","value":"۱۰۰٪ هاشمی خالص"},{"@type":"PropertyValue","name":"افزودنی‌ها","value":"ندارد"},{"@type":"PropertyValue","name":"عطر","value":"طبیعی و معطر"}],"url":"https://binjrice.github.io/fa/","image":"https://binjrice.github.io/assets/img/og.jpg"}</script>
 </head>
 <body id="top">
 <a class="skip-link" href="#main">پرش به محتوا</a>
@@ -80,7 +82,7 @@
     <p class="print-head__title">مشخصات محصول و شرایط تجاری</p>
     <p class="print-head__sub">برنج هاشمی فریدونکنار، آماده برای صادرات</p>
   </div>
-  <img class="print-head__poster" alt="" width="1000" height="1000" data-src="../assets/img/poster.webp">
+  <img class="print-head__poster" alt="" width="1000" height="1000">
 </div>
 
 <main id="main">
@@ -90,14 +92,14 @@
     <div class="wrap hero__grid">
       <div class="hero__copy">
         <!-- Everything in the hero paints on first load, so none of it is reveal-gated. -->
-        <p class="eyebrow"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>محصول ایران · کارتن صادراتی ۵ کیلوگرمی</span></p>
+        <p class="eyebrow"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span data-size="5kg">محصول ایران · کارتن صادراتی ۵ کیلوگرمی</span><span data-size="2kg">محصول ایران · قوطی کامپوزیتی ۲ کیلوگرمی</span></p>
         <h1 id="hero-title">برنج هاشمی فریدونکنار، آماده برای صادرات</h1>
-        <p class="lede">برنجی دانه‌بلند، معطر و کهنه‌شده از دشت خزری مازندران، وکیوم‌شده در کارتن دوجداره هشت‌ضلعی ۵ کیلوگرمی.</p>
+        <p class="lede">برنجی دانه‌بلند، معطر و کهنه‌شده از دشت خزری مازندران، وکیوم‌شده در <span data-size="5kg">کارتن دوجداره هشت‌ضلعی ۵ کیلوگرمی</span><span data-size="2kg">قوطی کامپوزیتی استوانه‌ای ۲ کیلوگرمی</span>.</p>
         <div class="hero__actions">
           <a class="btn btn--text" href="#rice">مشاهده مشخصات</a>
         </div>
         <dl class="facts">
-          <div class="fact"><dt>وزن خالص</dt><dd>۵ کیلوگرم / ۱۱ پوند</dd></div>
+          <div class="fact"><dt>وزن خالص</dt><dd><span data-size="5kg">۵ کیلوگرم / ۱۱ پوند</span><span data-size="2kg">۲ کیلوگرم / ۴٫۴ پوند</span></dd></div>
           <div class="fact"><dt>بسته‌بندی</dt><dd>وکیوم‌شده</dd></div>
           <div class="fact"><dt>خاستگاه</dt><dd>محصول ایران</dd></div>
           <div class="fact"><dt>سال برداشت</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
@@ -106,14 +108,22 @@
 
       <div class="stage" data-state="loading">
         <div class="stage__arch" aria-hidden="true"></div>
+        <div class="stage__size" role="radiogroup" aria-label="اندازهٔ بسته">
+          <button class="stage__size-option" type="button" role="radio" aria-checked="true" tabindex="0" data-value="5kg"
+                  data-stage-label="مدل سه‌بعدی و تعاملی کارتن ۵ کیلوگرمی برنج بینج"
+                  data-poster="../assets/img/poster.webp" data-poster-alt="کارتن هشت‌ضلعی ۵ کیلوگرمی برنج هاشمی بینج">۵&nbsp;کیلوگرم</button>
+          <button class="stage__size-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-value="2kg"
+                  data-stage-label="مدل سه‌بعدی و تعاملی قوطی ۲ کیلوگرمی برنج بینج"
+                  data-poster="../assets/img/poster-2kg.webp" data-poster-alt="قوطی کامپوزیتی ۲ کیلوگرمی برنج هاشمی بینج">۲&nbsp;کیلوگرم</button>
+        </div>
         <div class="stage__viewport">
           <three-d-stage transparent background="#ece7de" autorotate role="img" aria-label="مدل سه‌بعدی و تعاملی کارتن ۵ کیلوگرمی برنج بینج"></three-d-stage>
         </div>
         <div class="stage__loader" aria-hidden="true"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
         <div class="stage__fallback" role="group" aria-label="نمای سه‌بعدی در دسترس نیست">
-          <img class="stage__poster" alt="کارتن هشت‌ضلعی ۵ کیلوگرمی برنج هاشمی بینج" width="1000" height="1000" data-src="../assets/img/poster.webp" hidden>
+          <img class="stage__poster" alt="" width="1000" height="1000" hidden>
           <p class="stage__fallback-title">نمای سه‌بعدی در دسترس نیست</p>
-          <p class="stage__fallback-text">مرورگر شما نتوانست WebGL را راه‌اندازی کند؛ به‌جای نمای سه‌بعدی، تصویر ثابتی از کارتن نمایش داده می‌شود.</p>
+          <p class="stage__fallback-text">مرورگر شما نتوانست WebGL را راه‌اندازی کند؛ به‌جای نمای سه‌بعدی، تصویر ثابتی از محصول نمایش داده می‌شود.</p>
         </div>
         <div class="stage__bar">
           <button class="btn btn--ghost btn--lid" type="button" id="lid-toggle" data-open="false" disabled
@@ -139,7 +149,7 @@
       </div>
     </div>
     <noscript>
-      <div class="wrap"><p class="noscript-note">مرورگر شما نتوانست WebGL را راه‌اندازی کند؛ به‌جای نمای سه‌بعدی، تصویر ثابتی از کارتن نمایش داده می‌شود.</p></div>
+      <div class="wrap"><p class="noscript-note">مرورگر شما نتوانست WebGL را راه‌اندازی کند؛ به‌جای نمای سه‌بعدی، تصویر ثابتی از محصول نمایش داده می‌شود.</p></div>
     </noscript>
   </section>
 
@@ -154,7 +164,8 @@
         <div class="prose">
           <p>هاشمی برنجی دانه‌بلند، باریک و خوش‌عطر است که در دشت خزری مازندران کشت می‌شود و سالی یک‌بار برداشت می‌شود.</p>
           <p>این برنج پس از برداشت کهنه می‌شود. دانه‌های آن پس از پخت بلند، پف‌دار و جدا از هم می‌مانند.</p>
-          <p>هر کارتن ۵ کیلوگرم (۱۱ پوند) برنج را در کیسه‌ای وکیوم‌شده نگه می‌دارد. پنجره‌ای قوسی روی وجه جلویی کارتن به خریدار اجازه می‌دهد پیش از باز کردن بسته، دانه را ببیند.</p>
+          <p data-size="5kg">هر کارتن ۵ کیلوگرم (۱۱ پوند) برنج را در کیسه‌ای وکیوم‌شده نگه می‌دارد. پنجره‌ای قوسی روی وجه جلویی کارتن به خریدار اجازه می‌دهد پیش از باز کردن بسته، دانه را ببیند.</p>
+          <p data-size="2kg">هر قوطی ۲ کیلوگرم (۴٫۴ پوند) برنج را در کیسه‌ای وکیوم‌شده نگه می‌دارد. درب تلسکوپی قوطی مستقیم به بالا برداشته می‌شود و نوار کاغذی طلایی روی درب و بدنه نشان می‌دهد که قوطی هنوز باز نشده است.</p>
         </div>
       </header>
       <div class="section__body">
@@ -195,14 +206,15 @@
     <div class="wrap section__grid section__grid--flip">
       <header class="section__head" data-reveal>
         <p class="eyebrow"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>بسته‌بندی</span></p>
-        <h2 id="packaging-title">کارتنی ساخته‌شده برای مسیر حمل</h2>
+        <h2 id="packaging-title"><span data-size="5kg">کارتنی ساخته‌شده برای مسیر حمل</span><span data-size="2kg">قوطی‌ای ساخته‌شده برای مسیر حمل</span><span class="print-only">بسته‌بندی</span></h2>
         <div class="prose">
-          <p>کارتن مقوایی دوجداره هشت‌ضلعی به ابعاد ۲۴ × ۳۲ × ۱۰ سانتی‌متر، با گوشه‌های پخ‌شده، سینی پایه و درب تقویت‌شده و دستگیره طنابی پنبه‌ای. درب را باز کنید تا تاشدن دستگیره و کیسه وکیوم‌شده داخل کارتن را ببینید.</p>
+          <p data-size="5kg">کارتن مقوایی دوجداره هشت‌ضلعی به ابعاد ۲۴ × ۳۲ × ۱۰ سانتی‌متر، با گوشه‌های پخ‌شده، سینی پایه و درب تقویت‌شده و دستگیره طنابی پنبه‌ای. درب را باز کنید تا تاشدن دستگیره و کیسه وکیوم‌شده داخل کارتن را ببینید.</p>
+          <p data-size="2kg">قوطی گرد کامپوزیتی به قطر ۱۳ و ارتفاع ۲۵ سانتی‌متر، با بدنه‌ای از مقوای کامپوزیتی که مارپیچ پیچیده شده است، کف حلبی، درب تلسکوپی و دستگیره طنابی که برای چیدن روی هم تخت تا می‌شود. درب را بردارید تا کیسه وکیوم‌شده داخل قوطی را ببینید.</p>
         </div>
       </header>
       <div class="section__body">
-        <h3 class="table-title" data-reveal>کارتن و مواد</h3>
-        <dl class="specs" data-reveal="group">
+        <h3 class="table-title" data-reveal data-size="5kg">کارتن و مواد</h3>
+        <dl class="specs" data-reveal="group" data-size="5kg">
           <div class="spec-row spec-row--long" data-spec="cartonSize"><dt>ابعاد کارتن</dt><dd>۲۴ × ۳۲ × ۱۰ سانتی‌متر، هشت‌ضلعی با گوشه‌های پخ‌شده ۲٫۵ سانتی‌متری</dd></div>
           <div class="spec-row" data-spec="netWeight"><dt>وزن خالص</dt><dd>۵ کیلوگرم (۱۱ پوند)</dd></div>
           <div class="spec-row" data-spec="grossWeight"><dt>وزن ناخالص</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
@@ -213,6 +225,20 @@
           <div class="spec-row" data-spec="window"><dt>پنجره</dt><dd>فیلم شفاف PET با ضخامت ۵۰ میکرون، به شکل طاق جناغی</dd></div>
           <div class="spec-row spec-row--long" data-spec="innerLiner"><dt>کیسه داخلی</dt><dd>کیسه چندلایه PA/PE وکیوم‌شده، مانعی در برابر اکسیژن و رطوبت</dd></div>
           <div class="spec-row spec-row--long" data-spec="seal"><dt>مهر و موم</dt><dd>نوار کاغذی مهر و موم روی درب که با اولین باز کردن پاره می‌شود</dd></div>
+        </dl>
+        <h3 class="table-title" data-reveal data-size="2kg">قوطی و مواد</h3>
+        <dl class="specs" data-reveal="group" data-size="2kg">
+          <div class="spec-row" data-spec="canSize"><dt>ابعاد قوطی</dt><dd>گرد، قطر ۱۳ و ارتفاع ۲۵ سانتی‌متر</dd></div>
+          <div class="spec-row" data-spec="canNetWeight"><dt>وزن خالص</dt><dd>۲ کیلوگرم (۴٫۴ پوند)</dd></div>
+          <div class="spec-row" data-spec="canGrossWeight"><dt>وزن ناخالص</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
+          <div class="spec-row spec-row--long" data-spec="canBody"><dt>بدنه قوطی</dt><dd>لوله مقوایی کامپوزیتی که مارپیچ پیچیده شده است، با دیواره ۳ میلی‌متری از لایه‌های کرافت لمینت‌شده. استوانه از هر طرف در برابر له شدن مقاوم است</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canBase"><dt>کف قوطی</dt><dd>کف از ورق حلبی است که روی لوله درزگیری شده و پوشش لاک طلایی دارد</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canLid"><dt>درب</dt><dd>درب تلسکوپی کامپوزیتی که با اتصال اصطکاکی روی یقه کرافت داخلی می‌نشیند و مستقیم به بالا برداشته می‌شود</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canHandle"><dt>دستگیره</dt><dd>طناب بافته‌شده طلایی که زیر دو حلقه با پوشش طلایی گره خورده است؛ برای چیدن روی هم، تخت تا می‌شود</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canInnerLiner"><dt>کیسه داخلی</dt><dd>کیسه چندلایه PA/PE وکیوم‌شده، مانعی در برابر اکسیژن و رطوبت</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canSeal"><dt>مهر و موم</dt><dd>نوار کاغذی طلایی روی درب و بدنه که با اولین برداشتن درب پاره می‌شود</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canFinish"><dt>روکش چاپی</dt><dd>کاغذ چاپی دورپیچ با لمینت مات لمس‌نرم و هات‌فویل طلایی روی نشان نستعلیق، ترنج و حاشیه‌ها</dd></div>
+          <div class="spec-row spec-row--long" data-spec="canShipping"><dt>بسته‌بندی حمل</dt><dd>۶ قوطی در هر کارتن حمل دوجداره، با جداکننده‌های مقوایی</dd></div>
         </dl>
       </div>
     </div>
@@ -230,9 +256,9 @@
       </header>
       <dl class="specs specs--cols" data-reveal="group">
           <div class="spec-row" data-spec="hsCode"><dt>کد تعرفه (HS)</dt><dd>۱۰۰۶٫۳۰<span class="spec-note"><span class="spec-note__label">توضیح</span> نیازمند تأیید</span></dd></div>
-          <div class="spec-row" data-spec="cartonsPerPallet"><dt>تعداد کارتن در هر پالت</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
-          <div class="spec-row" data-spec="cartonsPer20ft"><dt>تعداد کارتن در کانتینر ۲۰ فوتی</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
-          <div class="spec-row" data-spec="cartonsPer40ft"><dt>تعداد کارتن در کانتینر ۴۰ فوتی</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
+          <div class="spec-row" data-spec="cartonsPerPallet"><dt>تعداد کارتن و قوطی در هر پالت</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
+          <div class="spec-row" data-spec="cartonsPer20ft"><dt>تعداد کارتن و قوطی در کانتینر ۲۰ فوتی</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
+          <div class="spec-row" data-spec="cartonsPer40ft"><dt>تعداد کارتن و قوطی در کانتینر ۴۰ فوتی</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
           <div class="spec-row" data-spec="moq"><dt>حداقل مقدار سفارش</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
           <div class="spec-row" data-spec="incoterms"><dt>شرایط تحویل (اینکوترمز)</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
           <div class="spec-row" data-spec="leadTime"><dt>زمان تحویل</dt><dd><span class="placeholder" data-placeholder>با درخواست ارائه می‌شود</span></dd></div>
@@ -255,7 +281,7 @@
         <p class="origin__place">فریدونکنار، مازندران، ایران</p>
         <div class="prose">
           <p>بینج هاشمی در شالیزارهای فریدونکنار، در دشت خزری مازندران در شمال ایران کشت می‌شود.</p>
-          <p>برنج سالی یک‌بار برداشت می‌شود و پیش از بسته‌بندی کهنه می‌شود. نام خاستگاه آن روی وجه جلویی هر کارتن چاپ شده است: فریدونکنار · مازندران · ایران.</p>
+          <p>برنج سالی یک‌بار برداشت می‌شود و پیش از بسته‌بندی کهنه می‌شود. نام خاستگاه آن روی وجه جلویی هر کارتن و قوطی چاپ شده است: فریدونکنار · مازندران · ایران.</p>
         </div>
       </div>
     </div>

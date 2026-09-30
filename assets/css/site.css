@@ -18,6 +18,8 @@
   --saffron: #c98f22;        /* ornaments and rules only, 2.3:1 on paper */
   --saffron-ink: #7f5709;    /* saffron for text on paper 5.2:1, on cream 5.5:1 */
   --saffron-light: #e0a83a;  /* saffron on green 4.7:1, on ink 6.2:1 */
+  --pomegranate: #6e1a26;    /* the 2 kg can's red; cream on it 11.2:1 */
+  --pomegranate-deep: #55131d;
   --on-dark: #f3ecdd;        /* on ink 12.7:1 */
   --on-dark-soft: #c3cec5;   /* on ink 9.3:1, on green 6.0:1 */
   --on-dark-muted: #a3b1a8;  /* on ink 6.9:1, on green 4.6:1 */
@@ -816,6 +818,24 @@ h3 {
   background: var(--saffron);
 }
 
+/* ----------------------------------------------------------- pack variants
+ * The page describes two packs, the 5 kg carton and the 2 kg can. Copy that
+ * differs carries data-size="5kg" or data-size="2kg"; <html data-pack> says
+ * which one is showing (the 5 kg carton unless main.js or ?size= says
+ * otherwise, so the page reads correctly without JavaScript). Print is not
+ * filtered: the spec sheet lists both packs.
+ */
+@media screen {
+  [data-pack="5kg"] [data-size="2kg"],
+  [data-pack="2kg"] [data-size="5kg"] {
+    display: none;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
 /* -------------------------------------------------------------------- hero */
 .hero {
   padding-block: var(--s-7) var(--s-8);
@@ -927,6 +947,13 @@ h3 {
 .stage__viewport {
   position: absolute;
   inset: 0;
+  transition: opacity 0.5s var(--ease);
+}
+
+/* Switching to a pack that is still loading: the old model steps aside for
+ * the loader. */
+.stage[data-state="loading"] .stage__viewport {
+  opacity: 0;
 }
 
 .stage three-d-stage {
@@ -1003,6 +1030,11 @@ h3 {
   color: var(--green);
 }
 
+/* "A still image is shown instead" is only true once the image has loaded. */
+.stage__fallback:not([data-image="on"]) .stage__fallback-text {
+  display: none;
+}
+
 .stage__fallback-text {
   max-inline-size: 26rem;
   font-size: var(--fs-small);
@@ -1052,6 +1084,10 @@ h3 {
   .stage__hint {
     display: none;
   }
+
+  .stage__size-option {
+    padding-inline: 0.75rem;
+  }
 }
 
 /* Zoom buttons: a small + / - stack in the top corner of the stage, clear of
@@ -1078,6 +1114,85 @@ h3 {
 
 .btn--zoom:disabled {
   opacity: 0.35;
+}
+
+/* Pack size: a two-option segmented control (radio group) in the top corner
+ * opposite the zoom stack. It needs JavaScript, so it is hidden without. */
+.stage__size {
+  position: absolute;
+  inset-block-start: var(--s-2);
+  inset-inline-start: 0;
+  /* Comes before the viewport in the source (and the tab order), so it is
+     lifted over it to stay clickable. */
+  z-index: 1;
+  display: none;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: rgba(243, 236, 221, 0.86);
+}
+
+.js .stage__size {
+  display: inline-flex;
+}
+
+.stage__size-option {
+  min-height: 2.25rem;
+  padding: 0.25rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.5s var(--ease), color 0.5s var(--ease);
+}
+
+.stage__size-option[aria-checked="true"] {
+  background: var(--green);
+  color: var(--cream);
+  cursor: default;
+}
+
+.stage__size-option:focus-visible {
+  outline-offset: 1px;
+}
+
+@media (hover: hover) {
+  .stage__size-option[aria-checked="false"]:hover {
+    background: rgba(29, 42, 36, 0.08);
+  }
+}
+
+/* The 2 kg can is pomegranate red, so its stage takes a touch of that: a
+ * blush ground behind it and the active controls in its red. */
+.stage__arch {
+  transition: background-color 0.6s var(--ease);
+}
+
+[data-pack="2kg"] .stage__arch {
+  background: #f4e7dd;
+}
+
+[data-pack="2kg"] .stage__size-option[aria-checked="true"] {
+  background: var(--pomegranate);
+}
+
+[data-pack="2kg"] .btn--lid[data-open="true"] {
+  --btn-bg: var(--pomegranate);
+  --btn-bd: var(--pomegranate);
+}
+
+@media (hover: hover) {
+  [data-pack="2kg"] .btn--lid[data-open="true"]:hover:not(:disabled) {
+    --btn-bg: var(--pomegranate-deep);
+    --btn-bd: var(--pomegranate-deep);
+  }
 }
 
 .noscript-note {
@@ -1768,6 +1883,7 @@ h3 {
 .is-poster .stage__loader,
 .is-poster .stage__bar,
 .is-poster .stage__zoom,
+.is-poster .stage__size,
 .is-poster .stage__fallback {
   display: none;
 }
@@ -1935,6 +2051,20 @@ h3 {
     font-size: 11pt;
   }
 
+  /* Both packs are listed on the sheet (data-size is only filtered on screen):
+     the lede names both, the net weights stack. */
+  .lede [data-size="2kg"]::before {
+    content: " and ";
+  }
+
+  :root[dir="rtl"] .lede [data-size="2kg"]::before {
+    content: " و ";
+  }
+
+  .fact dd [data-size] {
+    display: block;
+  }
+
   /* Sections */
   .section {
     padding: 0;
@@ -1967,6 +2097,25 @@ h3 {
 
   .table-title {
     display: none;
+  }
+
+  /* One heading for the packaging section, with a title over each pack's table. */
+  .section__head h2 [data-size] {
+    display: none;
+  }
+
+  .print-only {
+    display: inline;
+  }
+
+  #packaging .table-title {
+    display: block;
+    margin-block-end: 0.4mm;
+    font-size: 8pt;
+  }
+
+  #packaging .specs + .table-title {
+    margin-block-start: 4mm;
   }
 
   /* Nutrition stays on the sheet as a compact block. */

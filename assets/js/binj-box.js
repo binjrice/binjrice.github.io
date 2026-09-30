@@ -21,12 +21,13 @@
  * seeded generator so every render looks identical.
  *
  * Model: 24 x 32 x 10 cm octagonal carton (2.5 cm 45-degree chamfers) with
- * soft-touch matte cream/green board, chamfer reinforcement panels, gold
- * trim rings around the base tray and the lid, bilingual EN/FA labels with
- * gold hot-foil stamping (metalness/roughness maps) over a faint paddy-terrace
- * and rice-plant background, a Persian pointed-arch window, and a braided
- * saffron cotton cord handle through two brass-finish eyelets. The handle
- * folds flat, then the lid hinges open at the rear edge.
+ * soft-touch matte cream/green board, chamfer reinforcement panels, thin gold
+ * trim bands around the base tray and the lid, a hollow lid shell lined with
+ * kraft board, bilingual EN/FA labels with gold hot-foil stamping
+ * (metalness/roughness maps) over a faint paddy-terrace and rice-plant
+ * background, a Persian pointed-arch window, and a braided saffron cotton cord
+ * handle through two brass-finish eyelets. The handle folds flat, then the lid
+ * hinges open at the rear edge.
  */
 
 // Small deterministic PRNG (mulberry32).
@@ -84,6 +85,7 @@ export async function buildBinjBox(THREE, { fontsReady, onChange } = {}) {
     brass: new THREE.MeshStandardMaterial({ name: 'eyelet_brass_finish', color: '#d4ae55', roughness: 0.35, metalness: 0.45 }),
     liner: new THREE.MeshStandardMaterial({ name: 'liner_PA_PE', color: '#dfe2dc', roughness: 0.28, metalness: 0.15 }),
     collar: new THREE.MeshStandardMaterial({ name: 'inner_collar_kraft', color: '#c9a877', roughness: 0.8 }),
+    lining: new THREE.MeshStandardMaterial({ name: 'lid_lining_kraft', color: '#b9966a', roughness: 0.85 }),
     film: new THREE.MeshStandardMaterial({ name: 'window_PET', color: '#ffffff', roughness: 0.05, transparent: true, opacity: 0.18 }),
   };
 
@@ -93,10 +95,20 @@ export async function buildBinjBox(THREE, { fontsReady, onChange } = {}) {
     const m = new THREE.Mesh(geo, mat); m.name = name; m.position.set(x, y, z);
     m.castShadow = m.receiveShadow = true; parent.add(m); return m;
   }
-  function octPrism(w, d, c, h) {
-    const s = new THREE.Shape(), a = w / 2, b = d / 2;
-    s.moveTo(-a + c, -b); s.lineTo(a - c, -b); s.lineTo(a, -b + c); s.lineTo(a, b - c);
-    s.lineTo(a - c, b); s.lineTo(-a + c, b); s.lineTo(-a, b - c); s.lineTo(-a, -b + c); s.closePath();
+  // Octagon outline w x d with chamfer c, drawn onto a THREE.Shape or Path.
+  function octPath(p, w, d, c) {
+    const a = w / 2, b = d / 2;
+    p.moveTo(-a + c, -b); p.lineTo(a - c, -b); p.lineTo(a, -b + c); p.lineTo(a, b - c);
+    p.lineTo(a - c, b); p.lineTo(-a + c, b); p.lineTo(-a, b - c); p.lineTo(-a, -b + c); p.closePath();
+    return p;
+  }
+  // The same octagon pulled in by e on every side; the 45-degree chamfer edge
+  // moves in by e too, so its leg shrinks by e * (2 - sqrt 2).
+  const inset = ([w, d, c], e) => [w - 2 * e, d - 2 * e, c - e * (2 - Math.SQRT2)];
+  // Octagonal prism standing on y = 0. `hole` ([w, d, c]) turns it into a band.
+  function octPrism(w, d, c, h, hole) {
+    const s = octPath(new THREE.Shape(), w, d, c);
+    if (hole) s.holes.push(octPath(new THREE.Path(), ...hole));
     const g = new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false });
     g.rotateX(-Math.PI / 2);
     return g;
@@ -354,8 +366,13 @@ export async function buildBinjBox(THREE, { fontsReady, onChange } = {}) {
   ];
 
   // ---------- geometry ----------
-  add(octPrism(W + 0.004, D + 0.004, C + 0.0008, BASE_H), mats.green, 'base_tray_reinforced');
-  add(octPrism(W + 0.0056, D + 0.0056, C + 0.0012, 0.0025), mats.gold, 'trim_ring_base', 0, BASE_H - 0.0025, 0);
+  // Tray / lid outline and the gold trim band that hugs it. The band's hole
+  // reaches 0.2 mm under the board, and the band sits 0.2 mm off the board's
+  // top (tray) or bottom (lid) face, so no two faces are ever coplanar.
+  const EDGE = [W + 0.004, D + 0.004, C + 0.0008], TRIM = [W + 0.0056, D + 0.0056, C + 0.0012];
+  const TRIM_H = 0.0025, TRIM_HOLE = inset(EDGE, 0.0002);
+  add(octPrism(...EDGE, BASE_H), mats.green, 'base_tray_reinforced');
+  add(octPrism(...TRIM, TRIM_H, TRIM_HOLE), mats.gold, 'trim_ring_base', 0, BASE_H - TRIM_H - 0.0002, 0);
   add(octPrism(W, D, C, H - LID_H - 0.001), mats.carton, 'carton_body_octagon', 0, 0.001, 0);
   add(octPrism(W - 0.006, D - 0.006, C - 0.0012, LID_H - 0.004), mats.collar, 'inner_collar', 0, H - LID_H, 0);
   const pillow = add(new THREE.SphereGeometry(1, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2), mats.liner, 'vacuum_liner_top', 0, H - 0.0041, 0);
@@ -389,10 +406,18 @@ export async function buildBinjBox(THREE, { fontsReady, onChange } = {}) {
   const PZ = -(D / 2 + 0.002), PY = H - LID_H;
   const lid = new THREE.Group(); lid.name = 'lid'; lid.position.set(0, PY, PZ); model.add(lid);
   const LY = (y) => y - PY, LZ = (z) => z - PZ;
-  add(octPrism(W + 0.004, D + 0.004, C + 0.0008, LID_H), mats.green, 'lid_cap', 0, 0, LZ(0), lid);
-  add(octPrism(W + 0.0056, D + 0.0056, C + 0.0012, 0.0025), mats.gold, 'trim_ring_lid', 0, 0, LZ(0), lid);
+  // The lid is a board shell: a 3 mm skirt plus a 3 mm top, open underneath,
+  // with a kraft lining set 0.2 mm inside it. Each face of the lining sits at
+  // least 0.2 mm off the green board it backs onto.
+  const SKIRT = 0.003, TOP = 0.003, LINE = 0.0014;
+  const CAVITY = inset(EDGE, SKIRT), LINING = inset(EDGE, SKIRT + 0.0002);
+  add(octPrism(...EDGE, LID_H - TOP, CAVITY), mats.green, 'lid_cap', 0, 0, LZ(0), lid);
+  add(octPrism(...EDGE, TOP), mats.green, 'lid_top', 0, LID_H - TOP, LZ(0), lid);
+  add(octPrism(...LINING, LID_H - TOP - 0.0016, inset(EDGE, SKIRT + LINE)), mats.lining, 'lid_lining_walls', 0, 0.0004, LZ(0), lid);
+  add(octPrism(...LINING, 0.001), mats.lining, 'lid_lining_ceiling', 0, LID_H - TOP - 0.0012, LZ(0), lid);
+  add(octPrism(...TRIM, TRIM_H, TRIM_HOLE), mats.gold, 'trim_ring_lid', 0, -0.0002, LZ(0), lid);
   add(new THREE.BoxGeometry(0.035, 0.0008, D + 0.006), mats.saffron, 'tamper_seal_top', 0, LY(H + 0.0004), LZ(0), lid);
-  add(new THREE.BoxGeometry(0.035, LID_H, 0.0008), mats.saffron, 'tamper_seal_lid_front', 0, LY(H - LID_H / 2), LZ(D / 2 + 0.0024), lid);
+  add(new THREE.BoxGeometry(0.035, LID_H, 0.0008), mats.saffron, 'tamper_seal_lid_front', 0, LY(H - LID_H / 2), LZ(D / 2 + 0.0026), lid);
 
   // braided cotton cord handle through two eyelets
   const EX = 0.06;
@@ -407,6 +432,8 @@ export async function buildBinjBox(THREE, { fontsReady, onChange } = {}) {
   cx2.strokeStyle = 'rgba(255,230,170,.45)'; cx2.lineWidth = 3;
   for (let i = -54; i < 138; i += 21) { cx2.beginPath(); cx2.moveTo(i, 0); cx2.lineTo(i + 64, 64); cx2.stroke(); }
   const cordTex = tex(cc); cordTex.wrapS = cordTex.wrapT = THREE.RepeatWrapping; cordTex.repeat.set(70, 1);
+  // trilinear + anisotropic so the fine braid averages out at a distance (and when zoomed out) instead of shimmering
+  cordTex.minFilter = THREE.LinearMipmapLinearFilter; cordTex.generateMipmaps = true; cordTex.anisotropy = 16;
   const cordMat = new THREE.MeshStandardMaterial({ name: 'handle_cotton_cord_saffron', map: cordTex, roughness: 0.9 });
   const HP = 0.0045;
   const handle = new THREE.Group(); handle.name = 'carry_handle_cord'; handle.position.set(0, LY(H + HP), LZ(0)); lid.add(handle);

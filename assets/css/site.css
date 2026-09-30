@@ -1046,6 +1046,40 @@ h3 {
   font-size: var(--fs-micro);
 }
 
+/* The narrowest phones have no room for the hint beside the lid toggle; it
+ * would wrap and push the toggle up onto the carton. */
+@media (max-width: 22.49rem) {
+  .stage__hint {
+    display: none;
+  }
+}
+
+/* Zoom buttons: a small + / - stack in the top corner of the stage, clear of
+ * the arch and the carton, so the lid bar below stays on one row. */
+.stage__zoom {
+  position: absolute;
+  inset-block-start: var(--s-2);
+  inset-inline-end: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.stage[data-state="error"] .stage__zoom {
+  display: none;
+}
+
+.btn--zoom {
+  --btn-bg: rgba(243, 236, 221, 0.86);
+  width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+}
+
+.btn--zoom:disabled {
+  opacity: 0.35;
+}
+
 .noscript-note {
   margin-block-start: var(--s-5);
   font-size: var(--fs-small);
@@ -1733,6 +1767,7 @@ h3 {
 .is-poster .stage__arch,
 .is-poster .stage__loader,
 .is-poster .stage__bar,
+.is-poster .stage__zoom,
 .is-poster .stage__fallback {
   display: none;
 }

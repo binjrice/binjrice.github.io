@@ -32,8 +32,11 @@
  *   transparent - no background fill; the page shows through the canvas
  *   autorotate  - slow turntable until the user interacts. Disabled when the
  *                 user prefers reduced motion.
- *   zoom        - allow wheel / pinch zoom (off by default so the wheel keeps
- *                 scrolling the page)
+ *   zoom        - a plain mouse wheel zooms too (off by default so the wheel
+ *                 keeps scrolling the page). Two-finger pinch, trackpad pinch
+ *                 (ctrl + wheel), double-click / double-tap and the zoomIn() /
+ *                 zoomOut() methods always work.
+ *   no-zoom     - ignore every zoom gesture (the methods still work)
  *   pan         - allow right-drag / two-finger pan (off by default)
  *
  * Sizing: the host is display:block; width:100%; height:100%. Give it (or its
@@ -44,14 +47,33 @@
  *                                  three.js is unavailable
  *   stage.setObject(object3d)      show and frame an object (y-up, in metres)
  *   stage.resetView()              re-frame the camera on the current object
+ *                                  (default angle, zoom level 0)
+ *   stage.zoomIn() / zoomOut()     animated step along the zoom range
+ *   stage.setZoom(level)           animate to level 0..1 (0 = default framing,
+ *                                  1 = close enough to read the label text)
+ *   stage.zoomLevel                current target level, 0..1
  *   stage.renderToDataURL(w, h, type = 'image/png', quality = 0.92)
  *                                  render one frame at w x h, return a data URL
  *   'stage-ready' event            fired when ready resolves
  *   'stage-error' event            fired with detail: { error } on failure
+ *   'zoomchange' event             fired when the zoom level changes, with
+ *                                  detail: { level, atMin, atMax }
  *   [data-state]                   "loading" | "ready" | "error" on the host
  */
 (() => {
   const DEFAULT_BG = '#f0eee6';
+
+  // Zoom. Level 0 is the default framing and also the furthest out; level 1
+  // stops short of the surface by the distance at which the stage shows about
+  // ZOOM_VIEW metres of the carton across its narrower side (the label text is
+  // readable).
+  const ZOOM_STEP = 0.25;
+  const ZOOM_VIEW = 0.09;
+  const DOUBLE_TAP_ZOOM = 0.7;
+  // From this level up the view is centred on the double-tapped point.
+  const ZOOM_FOCUS_AT = 0.5;
+  const DOUBLE_TAP_MS = 400;
+  const clamp01 = (x) => Math.min(1, Math.max(0, x));
 
   const stylesheet = `
     :host {
@@ -166,13 +188,28 @@
       const controls = new controlsMod.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.08;
-      controls.enableZoom = this.hasAttribute('zoom');
+      // Zoom is handled in _bindZoom: OrbitControls' own zoom would swallow
+      // every wheel event and so trap page scrolling.
+      controls.enableZoom = false;
       controls.enablePan = this.hasAttribute('pan');
       this._controls = controls;
       // OrbitControls sets touch-action:none, which would trap page scrolling
       // on touch devices. Let vertical swipes scroll the page; horizontal
-      // drags still rotate the model.
+      // drags still rotate the model. A two-finger pinch is not part of pan-y,
+      // so the browser leaves it to the page script instead of zooming the page.
       renderer.domElement.style.touchAction = 'pan-y';
+
+      // Zoom state: the level eases from _zoomNow to _zoomGoal each frame.
+      // _focus is the point the view centres on once zoomed in (the object
+      // centre unless the user double-tapped a spot); _focusApplied is how far
+      // the orbit target has been slid towards it so far.
+      this._zoomGoal = 0;
+      this._zoomNow = 0;
+      this._exit = 0.05;
+      this._focus = new THREE.Vector3();
+      this._focusApplied = new THREE.Vector3();
+      this._ray = new THREE.Ray();
+      this._raycaster = new THREE.Raycaster();
 
       // Neutral studio: soft sky/ground wash, a key light and a dim fill from
       // behind so silhouettes never go black.
@@ -230,12 +267,14 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
           this._wantsAutorotate && !this._userMoved && !this._reducedMotion.matches;
       };
       controls.autoRotateSpeed = 1.2;
+      this._applyMotion = applyMotion;
       controls.addEventListener('start', () => {
         this._userMoved = true;
         applyMotion();
       });
       this._reducedMotion.addEventListener('change', applyMotion);
       applyMotion();
+      this._bindZoom(renderer.domElement);
 
       const fit = () => {
         const w = this.clientWidth || 1;
@@ -244,8 +283,12 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
         // Keep the object framed while the layout changes (e.g. rotating a
-        // phone), unless the user has already chosen their own view.
-        if (this._object && !this._userMoved) this._frame(true);
+        // phone), unless the user has already chosen their own view. The zoom
+        // range follows the new size either way.
+        if (this._object) {
+          if (this._userMoved) this._measure();
+          else this._frame(true);
+        }
       };
       fit();
       this._fit = fit;
@@ -260,8 +303,9 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
             })
           : null;
 
-      this._loop = () => {
+      this._loop = (time) => {
         if (!this._visible) return;
+        this._updateZoom(time);
         controls.update();
         renderer.render(scene, camera);
       };
@@ -289,6 +333,24 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
       if (this._io) this._io.disconnect();
     }
 
+    /** Default framing distance and the closest stop for the current size.
+     *  Fits against the narrower field of view (horizontal on portrait boxes).
+     *  Portrait boxes (phones) get a tighter margin so the carton fills more
+     *  of the stage. */
+    _measure() {
+      const camera = this._camera;
+      const half = Math.tan((camera.fov * Math.PI) / 360) * Math.min(1, camera.aspect);
+      const pad = camera.aspect < 1 ? 1.22 : 1.35;
+      const dist = (this._bounds.radius / half) * pad;
+      this._dist = dist;
+      // Camera-to-surface distance at zoom level 1.
+      this._minSurface = Math.min(dist, ZOOM_VIEW / 2 / half);
+      camera.near = Math.max(dist / 100, 0.01);
+      camera.far = dist * 100;
+      camera.updateProjectionMatrix();
+      return dist;
+    }
+
     /** Position the camera so the object's bounding sphere fits the view.
      *  keepDirection retains the current viewing direction (used on resize). */
     _frame(keepDirection) {
@@ -298,21 +360,14 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
       const camera = this._camera;
       const controls = this._controls;
 
-      // Fit against the narrower field of view (horizontal on portrait boxes).
-      // Portrait boxes (phones) get a tighter margin so the carton fills more
-      // of the stage.
-      const half = Math.tan((camera.fov * Math.PI) / 360) * Math.min(1, camera.aspect);
-      const pad = camera.aspect < 1 ? 1.22 : 1.35;
-      const dist = (sphere.radius / half) * pad;
+      const dist = this._measure();
 
       const dir = keepDirection
         ? camera.position.clone().sub(controls.target).normalize()
         : new THREE.Vector3(1, 0.55, 1.25).normalize();
       camera.position.copy(sphere.center).add(dir.multiplyScalar(dist));
-      camera.near = Math.max(dist / 100, 0.01);
-      camera.far = dist * 100;
-      camera.updateProjectionMatrix();
       controls.target.copy(sphere.center);
+      this._focusApplied.copy(sphere.center);
       controls.update();
     }
 
@@ -340,7 +395,9 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
         this._ground.position.z = centre.z;
         // Shadow disc: about 1.6 x the carton's footprint (half diagonal).
         this._ground.scale.setScalar((Math.hypot(size.x, size.z) / 2) * 1.6);
+        this._box = box;
         this._bounds = box.getBoundingSphere(new THREE.Sphere());
+        this._resetZoom();
         this._frame(false);
         const span = this._bounds.radius * 1.8;
         this._contact.shadow.camera.left = -span;
@@ -352,9 +409,223 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
       this._scene.add(object);
     }
 
-    /** Re-frame the camera on the current object from the default angle. */
+    /** Re-frame the camera on the current object from the default angle, at
+     *  zoom level 0. Immediate (the poster renderer relies on that). */
     resetView() {
-      if (this._object) this._frame(false);
+      if (!this._object) return;
+      this._resetZoom();
+      this._frame(false);
+    }
+
+    /** Current zoom level, 0 (default framing) to 1 (closest). */
+    get zoomLevel() {
+      return this._zoomGoal || 0;
+    }
+
+    zoomIn() {
+      this._zoomTo(this.zoomLevel + ZOOM_STEP);
+    }
+
+    zoomOut() {
+      this._zoomTo(this.zoomLevel - ZOOM_STEP);
+    }
+
+    /** Animate to a zoom level (0..1). */
+    setZoom(level) {
+      this._zoomTo(level);
+    }
+
+    _resetZoom() {
+      this._zoomNow = this._zoomGoal = 0;
+      if (this._bounds) this._focus.copy(this._bounds.center);
+      this._notifyZoom();
+    }
+
+    _notifyZoom() {
+      if (this._zoomSent === this._zoomGoal) return;
+      this._zoomSent = this._zoomGoal;
+      const level = this._zoomGoal;
+      this.dispatchEvent(
+        new CustomEvent('zoomchange', {
+          detail: { level, atMin: level <= 0, atMax: level >= 1 },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
+
+    /** Set the target level. `focus` (a Vector3) is the point to centre on once
+     *  zoomed in; `instant` skips the easing (used while fingers are on it). */
+    _zoomTo(level, focus, instant) {
+      if (!this._bounds) return;
+      level = clamp01(level);
+      // Zooming in from the default view starts from the object centre,
+      // unless a point was given.
+      if (focus) this._focus.copy(focus);
+      else if (this._zoomGoal === 0) this._focus.copy(this._bounds.center);
+      this._zoomGoal = level;
+      if (instant || this._reducedMotion.matches) this._zoomNow = level;
+      // The user has chosen a view: stop the turntable and keep the framing.
+      this._userMoved = true;
+      this._applyMotion();
+      this._notifyZoom();
+    }
+
+    /** Ease the zoom level and place the camera for it. Runs every frame.
+     *  The distance goes from the default framing (level 0) to _minSurface
+     *  short of the carton's surface (level 1) on a log scale, so each step
+     *  feels the same. The surface is found along the view ray, so the camera
+     *  stays outside the carton however it is turned. */
+    _updateZoom(time) {
+      if (!this._bounds) return;
+      const THREE = this._THREE;
+      const dt = Math.min(0.1, Math.max(0, (time - (this._lastTime ?? time)) / 1000));
+      this._lastTime = time;
+      const diff = this._zoomGoal - this._zoomNow;
+      if (diff) {
+        this._zoomNow = Math.abs(diff) < 5e-4 ? this._zoomGoal : this._zoomNow + diff * (1 - Math.exp(-dt * 9));
+      }
+      const z = this._zoomNow;
+      const camera = this._camera;
+      const target = this._controls.target;
+
+      // Slide the orbit target towards the focus point as the view zooms in
+      // (and back to the centre as it zooms out), carrying the camera along.
+      // Only the slide is applied, so a user pan is left alone.
+      const goal = this._bounds.center.clone().lerp(this._focus, clamp01(z / ZOOM_FOCUS_AT));
+      const shift = goal.sub(this._focusApplied);
+      target.add(shift);
+      camera.position.add(shift);
+      this._focusApplied.add(shift);
+
+      const dir = camera.position.clone().sub(target);
+      if (dir.lengthSq() < 1e-12) return;
+      dir.normalize();
+      // Distance from the target to the carton's surface, looking back along dir.
+      const reach = this._bounds.radius * 4 + target.distanceTo(this._bounds.center);
+      this._ray.set(target.clone().addScaledVector(dir, reach), dir.clone().negate());
+      const hit = this._ray.intersectBox(this._box, new THREE.Vector3());
+      this._exit = hit ? Math.max(0, reach - hit.distanceTo(this._ray.origin)) : 0;
+      const closest = Math.min(this._dist, this._minSurface + this._exit);
+      camera.position.copy(target).addScaledVector(dir, Math.pow(this._dist, 1 - z) * Math.pow(closest, z));
+    }
+
+    /** Wheel, pinch and double-tap zoom. A plain wheel is left alone (the page
+     *  scrolls) unless the `zoom` attribute is set. */
+    _bindZoom(el) {
+      const allowed = () => !this.hasAttribute('no-zoom');
+      // Level change per unit of ln(scale) for a pinch (scale > 1 zooms in).
+      const span = () => 1 / Math.log(this._dist / (this._minSurface + this._exit));
+
+      // Ctrl + wheel, which is how browsers report a trackpad pinch: zoom and
+      // keep the page itself from zooming. Only that is cancelled, so the
+      // plain wheel still scrolls the page.
+      el.addEventListener(
+        'wheel',
+        (e) => {
+          if (!allowed() || !(e.ctrlKey || this.hasAttribute('zoom'))) return;
+          e.preventDefault();
+          const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+          const cap = e.ctrlKey ? 25 : 100;
+          this._zoomTo(this._zoomGoal - Math.max(-cap, Math.min(cap, dy)) * (e.ctrlKey ? 0.008 : 0.002));
+        },
+        { passive: false }
+      );
+
+      // Two-finger pinch (pointer events) and double-tap / double-click.
+      const pointers = new Map();
+      let pinch = null;
+      let press = null;
+      let lastTap = null;
+      const spread = () => {
+        const [a, b] = [...pointers.values()];
+        return Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      };
+      el.addEventListener('pointerdown', (e) => {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+          pinch = allowed() ? { from: spread(), level: this._zoomGoal } : null;
+          press = lastTap = null;
+        } else {
+          press = pointers.size === 1 && e.button === 0 ? { x: e.clientX, y: e.clientY, time: e.timeStamp } : null;
+        }
+      });
+      el.addEventListener('pointermove', (e) => {
+        const p = pointers.get(e.pointerId);
+        if (!p) return;
+        p.x = e.clientX;
+        p.y = e.clientY;
+        if (pinch && pointers.size >= 2) {
+          this._zoomTo(pinch.level + Math.log(spread() / pinch.from) * span(), null, true);
+        }
+      });
+      const release = (e) => {
+        pointers.delete(e.pointerId);
+        if (pointers.size < 2) pinch = null;
+      };
+      el.addEventListener('pointercancel', (e) => {
+        release(e);
+        press = null;
+      });
+      el.addEventListener('pointerup', (e) => {
+        release(e);
+        const tap = press;
+        press = null;
+        if (!tap || pointers.size || !allowed()) return;
+        // A drag or a long press is not a tap.
+        if (Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8 || e.timeStamp - tap.time > 400) {
+          lastTap = null;
+        } else if (
+          lastTap &&
+          e.timeStamp - lastTap.time < DOUBLE_TAP_MS &&
+          Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30
+        ) {
+          lastTap = null;
+          this._toggleZoom(e.clientX, e.clientY);
+        } else {
+          lastTap = { x: e.clientX, y: e.clientY, time: e.timeStamp };
+        }
+      });
+
+      // A two-finger gesture must not scroll or zoom the page. touch-action
+      // already withholds pinch; this also covers iOS, where it is not enough.
+      const hold = (e) => {
+        if (allowed() && e.touches.length >= 2 && e.cancelable) e.preventDefault();
+      };
+      el.addEventListener('touchstart', hold, { passive: false });
+      el.addEventListener('touchmove', hold, { passive: false });
+
+      // Safari reports a desktop trackpad pinch as gesture events instead.
+      let gestureFrom = 0;
+      el.addEventListener('gesturestart', (e) => {
+        e.preventDefault();
+        gestureFrom = this._zoomGoal;
+      });
+      el.addEventListener('gesturechange', (e) => {
+        e.preventDefault();
+        if (allowed() && !pinch) this._zoomTo(gestureFrom + Math.log(e.scale) * span(), null, true);
+      });
+    }
+
+    /** Double-tap: back out if zoomed in, otherwise zoom in on the point that
+     *  was tapped (or towards the centre when it missed the carton). */
+    _toggleZoom(clientX, clientY) {
+      if (this._zoomGoal > 0.05) {
+        this._zoomTo(0);
+        return;
+      }
+      let point = null;
+      if (this._object) {
+        const rect = this._renderer.domElement.getBoundingClientRect();
+        const ndc = new this._THREE.Vector2(
+          ((clientX - rect.left) / rect.width) * 2 - 1,
+          -((clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this._raycaster.setFromCamera(ndc, this._camera);
+        const hit = this._raycaster.intersectObject(this._object, true)[0];
+        if (hit) point = hit.point;
+      }
+      this._zoomTo(DOUBLE_TAP_ZOOM, point || this._bounds.center);
     }
 
     /**
@@ -374,6 +645,8 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
       const h = Math.max(1, Math.round(height));
 
       const prevPos = camera.position.clone();
+      const prevTarget = this._controls.target.clone();
+      const prevApplied = this._focusApplied.clone();
       const prevAspect = camera.aspect;
       const prevNear = camera.near;
       const prevFar = camera.far;
@@ -399,6 +672,8 @@ gl_FragColor = vec4( color, opacity * fade * ( 1.0 - getShadowMask() ) );`
         renderer.setClearColor(0x000000, 0);
         renderer.setPixelRatio(prevRatio);
         camera.position.copy(prevPos);
+        this._controls.target.copy(prevTarget);
+        this._focusApplied.copy(prevApplied);
         camera.aspect = prevAspect;
         camera.near = prevNear;
         camera.far = prevFar;

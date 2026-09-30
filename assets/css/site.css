@@ -428,6 +428,12 @@ section[id] {
     display: none;
   }
 
+  /* Phone-sized tap targets for the header links and the footer language link. */
+  .wordmark,
+  .lang-link {
+    min-height: 2.75rem;
+  }
+
   .site-nav {
     position: absolute;
     inset-block-start: calc(100% + var(--s-2));
@@ -501,6 +507,7 @@ section[id] {
 
   .site-nav .nav-print {
     display: inline-flex;
+    min-height: 2.75rem;
     margin-block-start: var(--s-5);
   }
 
@@ -570,6 +577,7 @@ section[id] {
 }
 
 .btn:has(.btn__icon) {
+  padding-block: 0.4rem;
   padding-inline-end: 0.4rem;
 }
 
@@ -669,7 +677,7 @@ section[id] {
   }
 }
 
-/* Lid toggle: the chevron turns over when the lid is open. */
+/* Lid toggle: the chevron points up to lift the lid and turns over once it is open. */
 .btn--lid {
   --btn-bg: rgba(243, 236, 221, 0.86);
   --btn-bd: var(--rule-strong);
@@ -679,26 +687,26 @@ section[id] {
   transition: transform 0.6s var(--ease);
 }
 
-.btn--lid[aria-pressed="true"] {
+.btn--lid[data-open="true"] {
   --btn-bg: var(--green);
   --btn-fg: var(--cream);
   --btn-bd: var(--green);
 }
 
-/* Beats the generic ghost hover (0,3,0) so the pressed lid never turns pale. */
+/* Beats the generic ghost hover (0,3,0) so the open lid never turns pale. */
 @media (hover: hover) {
-  .btn--lid[aria-pressed="true"]:hover:not(:disabled) {
+  .btn--lid[data-open="true"]:hover:not(:disabled) {
     --btn-bg: var(--green-deep);
     --btn-fg: var(--cream);
     --btn-bd: var(--green-deep);
   }
 }
 
-.btn--lid[aria-pressed="true"] .btn__icon {
+.btn--lid[data-open="true"] .btn__icon {
   background: rgba(243, 236, 221, 0.16);
 }
 
-.btn--lid[aria-pressed="true"] .btn__icon svg {
+.btn--lid[data-open="true"] .btn__icon svg {
   transform: rotate(180deg);
 }
 
@@ -706,7 +714,7 @@ section[id] {
   transform: none;
 }
 
-:root[dir="rtl"] .btn--lid[aria-pressed="true"] .btn__icon svg {
+:root[dir="rtl"] .btn--lid[data-open="true"] .btn__icon svg {
   transform: rotate(180deg);
 }
 
@@ -737,14 +745,14 @@ h3 {
 
 h1 {
   font-size: var(--fs-display);
-  line-height: 0.98;
+  line-height: 1.1;
   letter-spacing: -0.012em;
   color: var(--green);
 }
 
 h2 {
   font-size: var(--fs-h2);
-  line-height: 1.04;
+  line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--green);
 }
@@ -1347,14 +1355,15 @@ h3 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: var(--s-8);
+    border-block-end: 0;
   }
 
   .specs--cols .spec-row {
     grid-template-columns: minmax(8rem, 10.5rem) minmax(0, 1fr);
   }
 
-  .specs--cols .spec-row:nth-last-child(-n + 2):nth-child(odd),
-  .specs--cols .spec-row:last-child {
+  /* Each column closes with its own rule, whichever column ends first. */
+  .specs--cols .spec-row:nth-last-child(-n + 2) {
     border-block-end: 1px solid var(--rule);
   }
 }
@@ -1375,7 +1384,7 @@ h3 {
   font-family: var(--font-display);
   font-size: clamp(2rem, 1.3rem + 3vw, 3.75rem);
   font-weight: var(--display-weight);
-  line-height: 1.08;
+  line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--cream);
   text-wrap: balance;

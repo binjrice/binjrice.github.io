@@ -173,7 +173,7 @@ function showFallback() {
 function wireLidButton(box) {
   const label = $('.btn__label', lidButton);
   const sync = (open) => {
-    lidButton.setAttribute('aria-pressed', String(open));
+    lidButton.dataset.open = String(open);
     label.textContent = open ? lidButton.dataset.labelClose : lidButton.dataset.labelOpen;
   };
   lidButton.addEventListener('click', () => box.toggle());

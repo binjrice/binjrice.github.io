@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Binj">
+  <rect width="64" height="64" rx="14" fill="#1f4a3a"/>
+  <text x="32" y="47" text-anchor="middle" font-family="'Cormorant Garamond', 'Iowan Old Style', Georgia, serif" font-size="46" font-weight="700" fill="#f3ecdd">B</text>
+  <circle cx="32" cy="12" r="2.6" fill="#c98f22"/>
+  <circle cx="23" cy="13.6" r="1.9" fill="#c98f22" opacity=".8"/>
+  <circle cx="41" cy="13.6" r="1.9" fill="#c98f22" opacity=".8"/>
+</svg>
